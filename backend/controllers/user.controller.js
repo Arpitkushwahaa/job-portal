@@ -90,6 +90,18 @@ export const login = async (req, res) => {
         }
         const token = await jwt.sign(tokenData, process.env.JWT_SECRET, { expiresIn: '1d' });
 
+        const cookieOptions = {
+            maxAge: 1 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            sameSite: 'lax' // Good default for local
+        };
+
+        // For production, use secure cookies for cross-site requests
+        if (process.env.NODE_ENV === 'production') {
+            cookieOptions.secure = true;
+            cookieOptions.sameSite = 'None';
+        }
+
         user = {
             _id: user._id,
             fullname: user.fullname,
@@ -99,7 +111,7 @@ export const login = async (req, res) => {
             profile: user.profile
         }
 
-                return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'lax' }).json({
+        return res.status(200).cookie("token", token, cookieOptions).json({
             message: `Welcome back ${user.fullname}`,
             user,
             success: true
