@@ -1,4 +1,6 @@
-const API_BASE_URL = "https://job-portal-2-rrsg.onrender.com"
+
+const API_BASE_URL = "https://job-portal-2-rrsg.onrender.com/api/v1";
+
 export const USER_API_END_POINT = `${API_BASE_URL}/user`;
 export const JOB_API_END_POINT = `${API_BASE_URL}/job`;
 export const APPLICATION_API_END_POINT = `${API_BASE_URL}/application`;
