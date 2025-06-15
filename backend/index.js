@@ -39,4 +39,7 @@ app.use("/api/v1/application", applicationRoute);
 
 
 
-export default app;
+app.listen(PORT,()=>{
+    connectDB();
+    console.log(`Server running at port ${PORT}`);
+})
