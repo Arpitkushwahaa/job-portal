@@ -4,10 +4,68 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>Job Portal - Find Your Dream Job</title>
+    
+    <!-- Performance Meta Tags -->
+    <meta name="description" content="Find the best job opportunities from top companies. Apply to jobs that match your skills and experience." />
+    <meta name="keywords" content="jobs, career, employment, hiring, job portal" />
+    <meta name="author" content="Job Portal" />
+    
+    <!-- Performance Optimizations -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="theme-color" content="#6A38C2" />
+    
+    <!-- Resource Hints for Performance -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/main.jsx" as="script" />
+    
+    <!-- Performance and Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    
+    <!-- Viewport optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    
+    <!-- Apple specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Job Portal" />
+    
+    <!-- Windows specific meta tags -->
+    <meta name="msapplication-TileColor" content="#6A38C2" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Job Portal - Find Your Dream Job" />
+    <meta property="og:description" content="Find the best job opportunities from top companies. Apply to jobs that match your skills and experience." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://job-portal-two-psi.vercel.app" />
+    <meta property="og:image" content="/og-image.jpg" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Job Portal - Find Your Dream Job" />
+    <meta name="twitter:description" content="Find the best job opportunities from top companies." />
+    <meta name="twitter:image" content="/og-image.jpg" />
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Performance: Load main script with high priority -->
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Performance: Add loading indicator -->
+    <noscript>
+      <div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Job Portal</h1>
+        <p>Please enable JavaScript to use this application.</p>
+      </div>
+    </noscript>
   </body>
 </html>

@@ -1,65 +1,59 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import dotenv from "dotenv";
-
-// Get the directory path and set up environment variables first
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load environment variables - handle both local and Render deployment
-let envPath;
-if (process.env.NODE_ENV === 'production') {
-    // On Render, don't try to load .env file
-    console.log('Running in production mode - using environment variables from Render');
-    
-    // Check if required environment variables are set
-    const requiredVars = ['MONGO_URI', 'JWT_SECRET'];
-    const missingVars = requiredVars.filter(varName => !process.env[varName]);
-    
-    if (missingVars.length > 0) {
-        console.warn(`⚠️  Warning: Missing required environment variables: ${missingVars.join(', ')}`);
-        console.warn('Make sure these are set in your Render dashboard');
-    } else {
-        console.log('✅ All required environment variables are set');
-    }
-} else {
-    // Local development - try to load .env file
-    envPath = join(__dirname, '.env');
-    console.log('Loading .env file from:', envPath);
-    
-    try {
-        const result = dotenv.config({ path: envPath });
-        if (result.error) {
-            console.warn('Warning: .env file not found, using system environment variables');
-        } else {
-            console.log('Successfully loaded .env file');
-        }
-    } catch (error) {
-        console.warn('Warning: Could not load .env file, using system environment variables');
-    }
-}
-
 import express from "express";
-import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 import cors from "cors";
-import connectDB from "./utils/db.js";
-import userRoute from "./routes/user.route.js";
-import companyRoute from "./routes/company.route.js";
-import jobRoute from "./routes/job.route.js";
-import applicationRoute from "./routes/application.route.js";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
-// Log environment variables for debugging (excluding sensitive ones)
-console.log('Environment loaded:', {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  MONGO_URI_EXISTS: process.env.MONGO_URI ? 'Yes' : 'No'
-});
+// Import routes
+import userRoutes from "./routes/user.route.js";
+import jobRoutes from "./routes/job.route.js";
+import applicationRoutes from "./routes/application.route.js";
+import companyRoutes from "./routes/company.route.js";
+
+// Import database connection
+import { connectDB } from "./utils/db.js";
+
+// Load environment variables
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const app = express();
 
-// middleware
-app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+// Performance and Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for development
+  crossOriginEmbedderPolicy: false
+}));
+
+// Compression middleware for faster responses
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
+
+// Rate limiting for API protection
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Robust CORS configuration for production deployment
@@ -112,21 +106,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Debug middleware to log requests
+// Cache control middleware for static responses
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`);
-    console.log('Origin:', req.headers.origin);
-    console.log('Headers:', req.headers);
-    next();
+  // Cache successful GET requests for 5 minutes
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+  }
+  next();
 });
 
-const PORT = process.env.PORT || 10000; // Default to Render's port
-
-// api's
-app.use("/api/v1/user", userRoute);
-app.use("/api/v1/company", companyRoute);
-app.use("/api/v1/job", jobRoute);
-app.use("/api/v1/application", applicationRoute);
+// Routes
+app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/job", jobRoutes);
+app.use("/api/v1/application", applicationRoutes);
+app.use("/api/v1/company", companyRoutes);
 
 // Test endpoint to verify CORS
 app.get("/api/v1/test", (req, res) => {
@@ -164,49 +157,76 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    port: PORT,
-    mongoUri: process.env.MONGO_URI ? 'Set' : 'Not Set',
-    jwtSecret: process.env.JWT_SECRET ? 'Set' : 'Not Set'
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "Job Portal Backend API",
-    status: "Running",
+    message: "Job Portal API is running!",
+    version: "1.0.0",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    endpoints: {
+      health: "/health",
+      test: "/api/v1/test",
+      testAuth: "/api/v1/test-auth",
+      user: "/api/v1/user",
+      job: "/api/v1/job",
+      application: "/api/v1/application",
+      company: "/api/v1/company"
+    }
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server starting on port ${PORT}`);
-    console.log(`🌐 CORS enabled for origins: *`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📱 Frontend URL: ${process.env.FRONTEND_URI || 'Not set'}`);
-    console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
-    
-    // Try to connect to database but don't crash if it fails
-    connectDB().then(connection => {
-        if (connection) {
-            console.log(`✅ Server running at port ${PORT}`);
-            console.log(`📊 Database connection status: Connected`);
-        } else {
-            console.log(`⚠️  Server running at port ${PORT} (without database)`);
-            console.log(`📊 Database connection status: Failed - check MONGO_URI`);
-        }
-    }).catch(error => {
-        console.log(`⚠️  Server running at port ${PORT} (database connection failed)`);
-        console.log(`📊 Database connection error: ${error.message}`);
-    });
-}).on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-        console.error(`Try using a different port or kill the process using port ${PORT}`);
-    } else {
-        console.error(`❌ Server failed to start: ${error.message}`);
-    }
-    process.exit(1);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+
+// Connect to database and start server
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    
+    const PORT = process.env.PORT || 10000; // Default to Render's port
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server starting on port ${PORT}`);
+      console.log(`🌐 CORS enabled for origins: *`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📱 Frontend URL: https://job-portal-two-psi.vercel.app`);
+      console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
+      console.log(`✅ Server running at port ${PORT}`);
+      console.log(`📊 Database connection status: Connected`);
+      console.log(`==> Your service is live 🎉`);
+      console.log(`==> ///////////////////////////////////////////////////////////`);
+      console.log(`==> Available at your primary URL https://job-portal-2-rrsg.onrender.com`);
+      console.log(`==> ///////////////////////////////////////////////////////////`);
+    }).on('error', (error) => {
+      console.error('❌ Server error:', error);
+      process.exit(1);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
