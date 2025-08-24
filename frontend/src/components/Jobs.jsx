@@ -27,15 +27,22 @@ const Jobs = () => {
     return (
         <div>
             <Navbar />
-            <div className='max-w-7xl mx-auto mt-5'>
-                <div className='flex gap-5'>
-                    <div className='w-20%'>
+            <div className='max-w-7xl mx-auto mt-5 px-4 sm:px-6 lg:px-8'>
+                <div className='flex flex-col lg:flex-row gap-4 sm:gap-5 lg:gap-8'>
+                    {/* Filter Card - Hidden on mobile, shown on larger screens */}
+                    <div className='w-full lg:w-1/5 order-2 lg:order-1'>
                         <FilterCard />
                     </div>
+                    
+                    {/* Jobs Grid */}
                     {
-                        filterJobs.length <= 0 ? <span>Job not found</span> : (
-                            <div className='flex-1 h-[88vh] overflow-y-auto pb-5'>
-                                <div className='grid grid-cols-3 gap-4'>
+                        filterJobs.length <= 0 ? (
+                            <div className='col-span-full text-center py-8'>
+                                <span className='text-lg text-gray-600'>Job not found</span>
+                            </div>
+                        ) : (
+                            <div className='flex-1 order-1 lg:order-2'>
+                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8'>
                                     {
                                         filterJobs.map((job) => (
                                             <motion.div
@@ -43,7 +50,9 @@ const Jobs = () => {
                                                 animate={{ opacity: 1, x: 0 }}
                                                 exit={{ opacity: 0, x: -100 }}
                                                 transition={{ duration: 0.3 }}
-                                                key={job?._id}>
+                                                key={job?._id}
+                                                className='w-full'
+                                            >
                                                 <Job job={job} />
                                             </motion.div>
                                         ))
@@ -54,8 +63,6 @@ const Jobs = () => {
                     }
                 </div>
             </div>
-
-
         </div>
     )
 }

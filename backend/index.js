@@ -1,24 +1,36 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import dotenv from "dotenv";
-dotenv.config();
+
+// Get the directory path and set up environment variables first
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const envPath = join(__dirname, '.env');
+console.log('Loading .env file from:', envPath);
+
+// Load environment variables before any other imports
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+    console.error('Error loading .env file:', result.error.message);
+    process.exit(1);
+}
+
+console.log('Loaded environment variables:', {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    MONGO_URI: process.env.MONGO_URI ? 'EXISTS' : 'NOT FOUND'
+});
 
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import connectDB from "./utils/db.js";
 import userRoute from "./routes/user.route.js";
 import companyRoute from "./routes/company.route.js";
 import jobRoute from "./routes/job.route.js";
 import applicationRoute from "./routes/application.route.js";
-
-
-// Get the directory path for the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load environment variables from .env file
-dotenv.config({ path: join(__dirname, '.env') });
 
 // Log environment variables for debugging (excluding sensitive ones)
 console.log('Environment loaded:', {

@@ -93,15 +93,22 @@ export const getJobById = async (req, res) => {
         
         // If user is authenticated, also include applications data
         if (req.id) {
+            console.log("User is authenticated with ID:", req.id);
             // User is authenticated, include applications data
             job = await Job.findById(jobId)
                 .populate({
-                    path: "applications"
+                    path: "applications",
+                    populate: {
+                        path: "applicant",
+                        select: "_id name email"
+                    }
                 })
                 .populate({
                     path: "company"
                 });
+            console.log("Job with populated applications:", job);
         } else {
+            console.log("User is not authenticated");
             // For non-authenticated users, provide an empty applications array
             job = job.toObject();
             job.applications = [];

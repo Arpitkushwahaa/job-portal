@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -57,13 +57,12 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 toast.success(res.data.message);
             }
         } catch (error) {
-            console.log(error);
+            console.error("Error updating profile:", error);
             toast.error(error.response.data.message);
         } finally{
             setLoading(false);
         }
         setOpen(false);
-        console.log(input);
     }
 
 
@@ -74,6 +73,9 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Update Profile</DialogTitle>
+                        <DialogDescription>
+                            Update your profile information and resume.
+                        </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submitHandler}>
                         <div className='grid gap-4 py-4'>

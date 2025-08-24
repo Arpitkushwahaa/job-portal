@@ -28,17 +28,39 @@ const JobDescription = () => {
         const fetchSingleJob = async () => {
             setLoading(true);
             setError(null);
+            console.log("Fetching job with ID:", jobId);
+            console.log("Current user state:", user);
+            
             try {
-                const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`);
+                const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, { 
+                    withCredentials: true 
+                });
                 
                 if (res.data.success) {
                     dispatch(setSingleJob(res.data.job));
+                    console.log("Job data received:", res.data.job);
+                    console.log("Current user:", user);
+                    console.log("Applications:", res.data.job.applications);
+                    
                     // Check if the current user has applied
                     if (user && res.data.job.applications && res.data.job.applications.length > 0) {
                         const hasApplied = res.data.job.applications.some(
-                            application => application.applicant === user._id
+                            application => {
+                                console.log("Checking application:", application);
+                                // Handle both cases: application object with applicant property or just applicant ID
+                                if (typeof application === 'object' && application.applicant) {
+                                    const isApplied = application.applicant._id === user._id;
+                                    console.log("Application applicant ID:", application.applicant._id, "User ID:", user._id, "Is applied:", isApplied);
+                                    return isApplied;
+                                }
+                                return false;
+                            }
                         );
+                        console.log("User has applied:", hasApplied);
                         setIsApplied(hasApplied);
+                    } else {
+                        console.log("No applications or user not found");
+                        setIsApplied(false);
                     }
                 }
             } catch (error) {
@@ -53,6 +75,30 @@ const JobDescription = () => {
         fetchSingleJob();
     }, [jobId, dispatch, user, navigate]);
 
+    // Function to check if user has already applied
+    const checkIfAlreadyApplied = async () => {
+        if (!user) return false;
+        
+        try {
+            const res = await axios.get(`${APPLICATION_API_END_POINT}/get`, { withCredentials: true });
+            if (res.data.success && res.data.application) {
+                const hasApplied = res.data.application.some(app => app.job._id === jobId);
+                setIsApplied(hasApplied);
+                return hasApplied;
+            }
+        } catch (error) {
+            console.error("Error checking application status:", error);
+        }
+        return false;
+    };
+
+    // Check application status when component mounts
+    useEffect(() => {
+        if (user) {
+            checkIfAlreadyApplied();
+        }
+    }, [user, jobId]);
+
     const applyJobHandler = async () => {
         if (!user) {
             toast.error("Please login to apply for this job");
@@ -61,7 +107,7 @@ const JobDescription = () => {
         }
         
         try {
-            const res = await axios.get(`${APPLICATION_API_END_POINT}/apply/${jobId}`, { 
+            const res = await axios.post(`${APPLICATION_API_END_POINT}/apply/${jobId}`, {}, { 
                 withCredentials: true,
                 headers: {
                     'Content-Type': 'application/json'
@@ -79,6 +125,8 @@ const JobDescription = () => {
                     dispatch(setSingleJob(updatedSingleJob));
                 }
                 toast.success(res.data.message);
+                // Re-check application status to ensure consistency
+                await checkIfAlreadyApplied();
             } else {
                 toast.error(res.data.message);
             }
@@ -89,6 +137,14 @@ const JobDescription = () => {
             if (error.response && error.response.status === 401) {
                 toast.error("Please login to apply for this job");
                 navigate('/login');
+            } else if (error.response && error.response.status === 400) {
+                // Handle already applied error
+                if (error.response.data.message.includes("already applied")) {
+                    setIsApplied(true);
+                    toast.error("You have already applied for this job");
+                } else {
+                    toast.error(error.response.data.message || "An error occurred.");
+                }
             } else {
                 toast.error(error.response?.data?.message || "An error occurred.");
             }
@@ -213,9 +269,27 @@ const JobDescription = () => {
                             <Button
                                 onClick={applyJobHandler}
                                 disabled={isApplied}
-                                className={`w-full mt-6 py-3 text-lg rounded-lg ${isApplied ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#6A38C2] hover:bg-[#5b30a6]'}`}>
-                                {isApplied ? 'Already Applied' : 'Apply Now'}
+                                className={`w-full mt-6 py-3 text-lg rounded-lg transition-all duration-200 ${
+                                    isApplied 
+                                        ? 'bg-green-600 hover:bg-green-700 text-white cursor-not-allowed' 
+                                        : 'bg-[#6A38C2] hover:bg-[#5b30a6] text-white'
+                                }`}>
+                                {isApplied ? (
+                                    <div className="flex items-center justify-center gap-2">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                        Already Applied
+                                    </div>
+                                ) : (
+                                    'Apply Now'
+                                )}
                             </Button>
+                            {isApplied && (
+                                <p className="text-center text-sm text-green-600 mt-2">
+                                    Your application has been submitted successfully!
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>

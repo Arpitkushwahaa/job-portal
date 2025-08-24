@@ -23,34 +23,36 @@ const CategoryCarousel = () => {
     }
 
     return (
-        <div className='bg-gray-50 py-20'>
-            <div className='max-w-7xl mx-auto px-6'>
-                <div className='text-center mb-12'>
-                    <h2 className='text-4xl md:text-5xl font-extrabold text-gray-900'>
-                        Explore by <span className='text-[#6A38C2]'>Category</span>
-                    </h2>
-                    <p className='text-gray-600 mt-4 text-lg'>
-                        Find jobs in your favorite categories. We have a wide range of opportunities available.
+        <div className='bg-white py-12 sm:py-16 lg:py-20'>
+            <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+                <div className='text-center mb-8 sm:mb-12'>
+                    <h1 className='text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4'>
+                        <span className='text-[#6A38C2]'>Popular</span> Job Categories
+                    </h1>
+                    <p className='text-gray-600 text-base sm:text-lg max-w-2xl mx-auto'>
+                        Explore job opportunities across various industries and find your perfect match
                     </p>
                 </div>
                 <Carousel className="w-full">
-                    <CarouselContent className="-ml-4">
+                    <CarouselContent className="-ml-2 sm:-ml-4">
                         {
                             categories.map((category, index) => (
-                                <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                                <CarouselItem key={index} className="pl-2 sm:pl-4 md:basis-1/2 lg:basis-1/3">
                                     <div 
                                         onClick={() => searchJobHandler(category.name)} 
-                                        className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center text-center group hover:bg-[#6A38C2] hover:scale-105"
+                                        className="bg-white p-6 sm:p-8 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center text-center group hover:bg-[#6A38C2] hover:scale-105"
                                     >
-                                        {category.icon}
-                                        <h3 className="text-xl font-semibold text-gray-800 mt-4 group-hover:text-white">{category.name}</h3>
+                                        <div className='w-12 h-12 sm:w-16 sm:h-16 text-[#6A38C2] group-hover:text-white transition-colors duration-300'>
+                                            {category.icon}
+                                        </div>
+                                        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mt-3 sm:mt-4 group-hover:text-white transition-colors duration-300">{category.name}</h3>
                                     </div>
                                 </CarouselItem>
                             ))
                         }
                     </CarouselContent>
-                    <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-lg" />
-                    <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-lg" />
+                    <CarouselPrevious className="absolute left-2 sm:left-0 top-1/2 -translate-y-1/2 bg-white shadow-lg" />
+                    <CarouselNext className="absolute right-2 sm:right-0 top-1/2 -translate-y-1/2 bg-white shadow-lg" />
                 </Carousel>
             </div>
         </div>

@@ -30,9 +30,18 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
             <ul className="space-y-2 text-gray-400">
-              <li>Email: support@jobportal.com</li>
-              <li>Phone: (123) 456-7890</li>
-              <li>Address: 123 Job St, Work City, WC 45678</li>
+              <li className="flex items-center gap-2">
+                <span>📧</span>
+                <span>kushwahaarpit360@gmail.com</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span>📞</span>
+                <span>+91 9580271088</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span>📍</span>
+                <span>Prayagraj, Uttar Pradesh, India</span>
+              </li>
             </ul>
           </div>
 
