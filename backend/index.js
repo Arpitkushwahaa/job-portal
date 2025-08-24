@@ -62,30 +62,49 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 
-// Aggressive CORS configuration for production deployment
+// Robust CORS configuration for production deployment
 app.use((req, res, next) => {
-  // Allow all origins for now to fix the immediate issue
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  const hasCredentials = req.headers.cookie || req.headers.authorization;
   
-  // Allow specific origins if you want to be more restrictive
-  // const allowedOrigins = [
-  //   'https://job-portal-two-psi.vercel.app',
-  //   'https://job-portal-two-psi.vercel.app/',
-  //   'http://localhost:5173',
-  //   'http://localhost:3000'
-  // ];
-  // const origin = req.headers.origin;
-  // if (allowedOrigins.includes(origin)) {
-  //   res.header('Access-Control-Allow-Origin', origin);
-  // }
+  console.log(`🌐 CORS Request: ${req.method} ${req.path}`);
+  console.log(`🌐 Origin: ${origin}`);
+  console.log(`🌐 Has Credentials: ${hasCredentials ? 'Yes' : 'No'}`);
+  
+  // Handle credentials properly - if credentials are included, set specific origin
+  if (origin) {
+    // Allow specific origins for credentials
+    const allowedOrigins = [
+      'https://job-portal-two-psi.vercel.app',
+      'https://job-portal-two-psi.vercel.app/',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      console.log(`🌐 CORS: Allowing origin ${origin} with credentials`);
+    } else {
+      // For other origins, allow but without credentials
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Credentials', 'false');
+      console.log(`🌐 CORS: Allowing origin ${origin} without credentials`);
+    }
+  } else {
+    // No origin header, allow all without credentials
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    console.log(`🌐 CORS: No origin header, allowing all without credentials`);
+  }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept, Cache-Control, X-HTTP-Method-Override');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400');
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
+    console.log(`🌐 CORS: Handling preflight request for ${origin}`);
     res.status(200).end();
     return;
   }
@@ -115,10 +134,27 @@ app.get("/api/v1/test", (req, res) => {
     message: "CORS test successful!",
     timestamp: new Date().toISOString(),
     origin: req.headers.origin,
+    hasCredentials: !!(req.headers.cookie || req.headers.authorization),
     corsHeaders: {
       'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
       'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
-      'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
+      'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
+    }
+  });
+});
+
+// CORS test endpoint with credentials
+app.get("/api/v1/test-auth", (req, res) => {
+  res.json({
+    message: "CORS test with credentials successful!",
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin,
+    hasCredentials: !!(req.headers.cookie || req.headers.authorization),
+    cookies: req.headers.cookie || 'No cookies',
+    corsHeaders: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
     }
   });
 });

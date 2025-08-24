@@ -12,8 +12,10 @@ const useGetAllJobs = () => {
     useEffect(() => {
         const fetchAllJobs = async () => {
             try {
-                // Remove withCredentials to allow non-authenticated requests
-                const res = await axios.get(`${JOB_API_END_POINT}/get?keyword=${searchedQuery}`);
+                // Explicitly set withCredentials to false for public job fetching
+                const res = await axios.get(`${JOB_API_END_POINT}/get?keyword=${searchedQuery}`, {
+                    withCredentials: false
+                });
                 if(res.data.success) {
                     dispatch(setAllJobs(res.data.jobs));
                 }
