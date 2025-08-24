@@ -23,6 +23,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 
+// Trust proxy for rate limiting behind load balancers
+app.set('trust proxy', 1);
+
 // Performance and Security Middleware
 app.use(helmet({
   contentSecurityPolicy: false, // Disable for development
@@ -48,6 +51,12 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === '/health' || req.path === '/',
+  // Use IP from X-Forwarded-For header when behind proxy
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+  }
 });
 app.use('/api/', limiter);
 
@@ -112,6 +121,25 @@ app.use((req, res, next) => {
   if (req.method === 'GET') {
     res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
   }
+  next();
+});
+
+// Database connection check middleware
+app.use('/api/', (req, res, next) => {
+  // Skip database check for health endpoints
+  if (req.path === '/health' || req.path === '/') {
+    return next();
+  }
+  
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection not available. Please try again later.',
+      error: 'DATABASE_UNAVAILABLE'
+    });
+  }
+  
   next();
 });
 
@@ -207,16 +235,19 @@ app.use('*', (req, res) => {
 // Connect to database and start server
 const startServer = async () => {
   try {
-    // Connect to MongoDB
+    // Connect to MongoDB first
+    console.log("🔄 Starting server initialization...");
     const dbConnection = await connectDB();
     
     if (!dbConnection && process.env.NODE_ENV === 'production') {
       console.warn('⚠️ Warning: Database connection failed, but continuing in production mode');
+      console.warn('⚠️ API endpoints will return 503 errors until database is available');
     }
     
     const PORT = process.env.PORT || 10000; // Default to Render's port
     
-    app.listen(PORT, '0.0.0.0', () => {
+    // Start server after database connection attempt
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server starting on port ${PORT}`);
       console.log(`🌐 CORS enabled for origins: *`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -228,7 +259,10 @@ const startServer = async () => {
       console.log(`==> ///////////////////////////////////////////////////////////`);
       console.log(`==> Available at your primary URL https://job-portal-2-rrsg.onrender.com`);
       console.log(`==> ///////////////////////////////////////////////////////////`);
-    }).on('error', (error) => {
+    });
+    
+    // Handle server errors
+    server.on('error', (error) => {
       console.error('❌ Server error:', error);
       if (error.code === 'EADDRINUSE') {
         console.error(`Port ${PORT} is already in use. Trying alternative port...`);
