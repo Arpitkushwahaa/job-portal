@@ -53,9 +53,10 @@ const limiter = rateLimit({
   legacyHeaders: false,
   // Skip rate limiting for health checks
   skip: (req) => req.path === '/health' || req.path === '/',
-  // Use IP from X-Forwarded-For header when behind proxy
+  // Use proper IP key generator for IPv6 support
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+    // Use the built-in IP key generator for proper IPv6 handling
+    return req.ip || req.connection.remoteAddress || 'unknown';
   }
 });
 app.use('/api/', limiter);
