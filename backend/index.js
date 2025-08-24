@@ -6,22 +6,38 @@ import dotenv from "dotenv";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const envPath = join(__dirname, '.env');
-console.log('Loading .env file from:', envPath);
-
-// Load environment variables before any other imports
-const result = dotenv.config({ path: envPath });
-
-if (result.error) {
-    console.error('Error loading .env file:', result.error.message);
-    process.exit(1);
+// Load environment variables - handle both local and Render deployment
+let envPath;
+if (process.env.NODE_ENV === 'production') {
+    // On Render, don't try to load .env file
+    console.log('Running in production mode - using environment variables from Render');
+    
+    // Check if required environment variables are set
+    const requiredVars = ['MONGO_URI', 'JWT_SECRET'];
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+        console.warn(`⚠️  Warning: Missing required environment variables: ${missingVars.join(', ')}`);
+        console.warn('Make sure these are set in your Render dashboard');
+    } else {
+        console.log('✅ All required environment variables are set');
+    }
+} else {
+    // Local development - try to load .env file
+    envPath = join(__dirname, '.env');
+    console.log('Loading .env file from:', envPath);
+    
+    try {
+        const result = dotenv.config({ path: envPath });
+        if (result.error) {
+            console.warn('Warning: .env file not found, using system environment variables');
+        } else {
+            console.log('Successfully loaded .env file');
+        }
+    } catch (error) {
+        console.warn('Warning: Could not load .env file, using system environment variables');
+    }
 }
-
-console.log('Loaded environment variables:', {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    MONGO_URI: process.env.MONGO_URI ? 'EXISTS' : 'NOT FOUND'
-});
 
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -46,39 +62,46 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 
-// Updated CORS configuration
-const corsOptions = {
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URI,
-      "https://job-portal-two-psi.vercel.app", 
-      "http://localhost:5173",
-      "http://127.0.0.1:5173"
-    ];
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if(!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log("Blocked by CORS:", origin);
-      callback(null, true); // Allow all origins in development
-    }
-  },
-  methods: "GET,POST,PUT,DELETE,OPTIONS",
-  allowedHeaders: "Content-Type,Authorization,X-Requested-With",
-  credentials: true,
-  exposedHeaders: ['set-cookie']
-};
-
-app.use(cors(corsOptions));
+// Aggressive CORS configuration for production deployment
+app.use((req, res, next) => {
+  // Allow all origins for now to fix the immediate issue
+  res.header('Access-Control-Allow-Origin', '*');
+  
+  // Allow specific origins if you want to be more restrictive
+  // const allowedOrigins = [
+  //   'https://job-portal-two-psi.vercel.app',
+  //   'https://job-portal-two-psi.vercel.app/',
+  //   'http://localhost:5173',
+  //   'http://localhost:3000'
+  // ];
+  // const origin = req.headers.origin;
+  // if (allowedOrigins.includes(origin)) {
+  //   res.header('Access-Control-Allow-Origin', origin);
+  // }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept, Cache-Control, X-HTTP-Method-Override');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
 
 // Debug middleware to log requests
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
+    console.log('Origin:', req.headers.origin);
     console.log('Headers:', req.headers);
     next();
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Default to Render's port
 
 // api's
 app.use("/api/v1/user", userRoute);
@@ -86,7 +109,68 @@ app.use("/api/v1/company", companyRoute);
 app.use("/api/v1/job", jobRoute);
 app.use("/api/v1/application", applicationRoute);
 
-app.listen(PORT,()=>{
-    connectDB();
-    console.log(`Server running at port ${PORT}`);
+// Test endpoint to verify CORS
+app.get("/api/v1/test", (req, res) => {
+  res.json({
+    message: "CORS test successful!",
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin,
+    corsHeaders: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
+      'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
+    }
+  });
+});
+
+// Health check endpoint for Render
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT,
+    mongoUri: process.env.MONGO_URI ? 'Set' : 'Not Set',
+    jwtSecret: process.env.JWT_SECRET ? 'Set' : 'Not Set'
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Job Portal Backend API",
+    status: "Running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server starting on port ${PORT}`);
+    console.log(`🌐 CORS enabled for origins: *`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📱 Frontend URL: ${process.env.FRONTEND_URI || 'Not set'}`);
+    console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
+    
+    // Try to connect to database but don't crash if it fails
+    connectDB().then(connection => {
+        if (connection) {
+            console.log(`✅ Server running at port ${PORT}`);
+            console.log(`📊 Database connection status: Connected`);
+        } else {
+            console.log(`⚠️  Server running at port ${PORT} (without database)`);
+            console.log(`📊 Database connection status: Failed - check MONGO_URI`);
+        }
+    }).catch(error => {
+        console.log(`⚠️  Server running at port ${PORT} (database connection failed)`);
+        console.log(`📊 Database connection error: ${error.message}`);
+    });
+}).on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+        console.error(`Try using a different port or kill the process using port ${PORT}`);
+    } else {
+        console.error(`❌ Server failed to start: ${error.message}`);
+    }
+    process.exit(1);
 });
