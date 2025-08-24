@@ -14,7 +14,7 @@ import applicationRoutes from "./routes/application.route.js";
 import companyRoutes from "./routes/company.route.js";
 
 // Import database connection
-import { connectDB } from "./utils/db.js";
+import connectDB from "./utils/db.js";
 
 // Load environment variables
 if (process.env.NODE_ENV !== 'production') {
@@ -158,16 +158,22 @@ app.get("/health", (req, res) => {
     status: "OK",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    version: "1.0.0",
+    services: {
+      server: "running",
+      database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+    }
   });
 });
 
-// Root endpoint
+// Simple health check for load balancers
 app.get("/", (req, res) => {
   res.json({
     message: "Job Portal API is running!",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
+    status: "healthy",
     endpoints: {
       health: "/health",
       test: "/api/v1/test",
@@ -202,7 +208,11 @@ app.use('*', (req, res) => {
 const startServer = async () => {
   try {
     // Connect to MongoDB
-    await connectDB();
+    const dbConnection = await connectDB();
+    
+    if (!dbConnection && process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Warning: Database connection failed, but continuing in production mode');
+    }
     
     const PORT = process.env.PORT || 10000; // Default to Render's port
     
@@ -213,19 +223,37 @@ const startServer = async () => {
       console.log(`📱 Frontend URL: https://job-portal-two-psi.vercel.app`);
       console.log(`🌍 Server listening on 0.0.0.0:${PORT}`);
       console.log(`✅ Server running at port ${PORT}`);
-      console.log(`📊 Database connection status: Connected`);
+      console.log(`📊 Database connection status: ${dbConnection ? 'Connected' : 'Failed'}`);
       console.log(`==> Your service is live 🎉`);
       console.log(`==> ///////////////////////////////////////////////////////////`);
       console.log(`==> Available at your primary URL https://job-portal-2-rrsg.onrender.com`);
       console.log(`==> ///////////////////////////////////////////////////////////`);
     }).on('error', (error) => {
       console.error('❌ Server error:', error);
-      process.exit(1);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Trying alternative port...`);
+        // Try alternative port
+        app.listen(0, '0.0.0.0', () => {
+          console.log(`🚀 Server started on alternative port`);
+        });
+      } else {
+        process.exit(1);
+      }
     });
     
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    process.exit(1);
+    // In production, try to start server even if database fails
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Attempting to start server without database...');
+      const PORT = process.env.PORT || 10000;
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server started on port ${PORT} (without database)`);
+        console.log(`⚠️ Some features may not work without database connection`);
+      });
+    } else {
+      process.exit(1);
+    }
   }
 };
 
