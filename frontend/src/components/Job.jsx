@@ -30,64 +30,80 @@ const Job = ({ job }) => {
     return (
         <div 
             onClick={handleNavigate}
-            className='p-4 sm:p-5 lg:p-6 rounded-lg shadow-md bg-white border border-gray-200 hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer'
+            className='group p-5 rounded-xl shadow-sm bg-white border border-gray-200 hover:shadow-lg hover:border-[#6A38C2]/30 hover:scale-[1.02] transition-all duration-300 cursor-pointer bg-gradient-to-br from-white to-gray-50/50'
         >
-            <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4'>
-                <div className='flex items-center gap-3 sm:gap-4'>
-                    <Avatar className="h-12 w-12 sm:h-16 sm:w-16 bg-[#6A38C2] text-white flex-shrink-0">
+            {/* Header with Company Info and Bookmark */}
+            <div className='flex items-start justify-between mb-4'>
+                <div className='flex items-center gap-3 flex-1 min-w-0'>
+                    <Avatar className="h-12 w-12 bg-gradient-to-br from-[#6A38C2] to-[#8B5CF6] text-white flex-shrink-0 shadow-sm">
                         <AvatarImage 
                             src={job?.company?.logo || "https://via.placeholder.com/100?text=" + encodeURIComponent(getCompanyInitials(job?.company?.name))} 
                             alt={job?.company?.name} 
                         />
-                        <AvatarFallback className="bg-[#6A38C2] text-white text-sm sm:text-lg font-semibold">
+                        <AvatarFallback className="bg-gradient-to-br from-[#6A38C2] to-[#8B5CF6] text-white text-sm font-semibold">
                             {getCompanyInitials(job?.company?.name)}
                         </AvatarFallback>
                     </Avatar>
                     <div className='min-w-0 flex-1'>
-                        <h2 className='text-lg sm:text-xl font-bold text-gray-900 truncate'>{job?.title}</h2>
-                        <p className='text-sm sm:text-md text-gray-600 truncate'>{job?.company?.name}</p>
+                        <h2 className='text-lg font-bold text-gray-900 truncate group-hover:text-[#6A38C2] transition-colors'>
+                            {job?.title}
+                        </h2>
+                        <p className='text-sm text-gray-600 truncate flex items-center gap-1'>
+                            <Building className='h-3 w-3' />
+                            {job?.company?.name}
+                        </p>
                     </div>
                 </div>
                 <button 
                     onClick={(e) => {
-                        e.stopPropagation(); // Prevent navigation when clicking the bookmark
+                        e.stopPropagation();
                         // Add bookmark logic here
                     }}
-                    className="p-2 text-gray-400 hover:text-[#6A38C2] transition-colors self-start sm:self-auto"
+                    className="p-2 text-gray-400 hover:text-[#6A38C2] hover:bg-[#6A38C2]/10 rounded-lg transition-all duration-200 self-start"
                 >
-                    <Bookmark className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Bookmark className="h-4 w-4" />
                 </button>
             </div>
 
-            <div className='my-3 sm:my-4'>
-                <p className='text-xs sm:text-sm text-gray-700 leading-relaxed'>
-                    {job?.description.length > 150 ? `${job?.description.substring(0, 150)}...` : job?.description}
+            {/* Job Description */}
+            <div className='mb-4'>
+                <p className='text-sm text-gray-700 leading-relaxed line-clamp-3'>
+                    {job?.description.length > 120 ? `${job?.description.substring(0, 120)}...` : job?.description}
                 </p>
             </div>
 
-            <div className='flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600'>
-                <div className='flex items-center gap-1 sm:gap-2'>
-                    <Briefcase className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>{job?.jobType}</span>
+            {/* Job Details */}
+            <div className='grid grid-cols-2 gap-3 mb-4'>
+                <div className='flex items-center gap-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg'>
+                    <Briefcase className="h-3 w-3 text-[#6A38C2]" />
+                    <span className='truncate'>{job?.jobType}</span>
                 </div>
-                <div className='flex items-center gap-1 sm:gap-2'>
-                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>{job?.location || "India"}</span>
+                <div className='flex items-center gap-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg'>
+                    <MapPin className="h-3 w-3 text-[#6A38C2]" />
+                    <span className='truncate'>{job?.location || "India"}</span>
                 </div>
-                <div className='flex items-center gap-1 sm:gap-2'>
-                    <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4" />
+            </div>
+
+            {/* Salary and Additional Info */}
+            <div className='flex items-center justify-between mb-4'>
+                <div className='flex items-center gap-2 text-sm font-medium text-green-600 bg-green-50 px-3 py-2 rounded-lg'>
+                    <IndianRupee className="h-4 w-4" />
                     <span>{job?.salary} LPA</span>
                 </div>
+                <Badge variant="outline" className="border-[#6A38C2] text-[#6A38C2] bg-[#6A38C2]/5 text-xs">
+                    {job?.position} Position{job?.position > 1 ? 's' : ''}
+                </Badge>
             </div>
 
-            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4'>
-                <div>
-                    <Badge variant="outline" className="border-green-500 text-green-600 text-xs sm:text-sm">{job?.position} Positions</Badge>
-                </div>
-                <p className='text-xs sm:text-sm text-gray-500 flex items-center gap-1 sm:gap-2'>
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+            {/* Footer with Time */}
+            <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
+                <p className='text-xs text-gray-500 flex items-center gap-1'>
+                    <Clock className="h-3 w-3" />
                     {daysAgoFunction(job?.createdAt)}
                 </p>
+                <div className='text-xs text-[#6A38C2] font-medium group-hover:translate-x-1 transition-transform'>
+                    View Details →
+                </div>
             </div>
         </div>
     );
